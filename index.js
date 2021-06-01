@@ -5,12 +5,13 @@ const bodyParser = require('body-parser');
 const {User} = require("./models/User");
 const mongoose = require('mongoose');
 const config = require('./config/key')
+const cookieParser = require('cookie-parser');
 
 //어플리케이션 / x-ww-form-urlencoded
 app.use(express.urlencoded({extended:true}));
 // 어플리케이션 /json
 app.use(express.json());
-
+app.use(cookieParser());
 
 
 mongoose.connect(config.mongoURI, {
@@ -20,7 +21,7 @@ mongoose.connect(config.mongoURI, {
 
 
 app.get('/', (req, res) => {
-  res.send('바로바로 변경~')
+  res.send('바로바로 변경~ nodemon')
 })
 
 app.post('/register', (req, res) => {
@@ -35,6 +36,38 @@ app.post('/register', (req, res) => {
        success: true
      })
   })
+
+})
+
+app.post('/login',(req,res) => {
+
+  // 요청된 이메일이 데이터베이스에 있는지 확인
+    User.findOne({ email: req.body.email}, (err, user) => {
+      if(!user) {
+        return res.json ({
+          loginSuccess : false,
+          message : "제공된 이메일에 해당되는 유저가 없습니다 ."
+        })
+      }
+  // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 일치한지 확인
+      user.comparePassword(req.body.password, (err, isMatch) => {
+        if(!isMatch)
+        return res.json({loginSuccess: false, message: "비밀번호 불일치"})
+
+        user.generateToken((err, user)=> {
+          if(err) return res.status(400).send(err)
+          // 토큰을 저장한다 . 쿠키 , 로컬스토리지 , 등등 여러가지 방법이 있지만 이번엔 쿠키에다가
+          res.cookie("x_auth",user.token )
+            .status(200)
+            .json({loginSuccess:true, userId: user._id})
+          
+        })
+      })
+      
+    })
+
+
+  // 비밀번호 까지 맞다면 토큰을 생성하기
 
 })
 
