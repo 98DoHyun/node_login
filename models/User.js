@@ -66,14 +66,27 @@ userSchema.methods.generateToken = function(cb){
      // jsonwebtoken을 이용해서 생성하기
      var user = this;
      var token = jwt.sign(user._id.toHexString(), 'secretToken')
-     /*user._id + 'secretToken' = token
-     ->
-     'secretToken' -> user.id */
+     
+      // user._id + 'secretToken' = token  -> 'secretToken' -> user.id 
+    
      user.token = token;
      user.save(function(err, user) {
          if(err) return cb(err)
          cb(null, user)
      })
+}
+
+userSchema.statics.findByToken = function(token, cb) {
+    var user = this;
+    
+    //토큰을 디코드 한다 
+    jwt.verify(token, 'secretToken', function(err, decoded){
+        //유저 아이디를 이용해서 유저를 찾은다음에 클라이언트에서 가저온 토큰과 디비에 보관된 토큰이 일치하는이 확인
+        user.findOne({ "_id": decoded, "token": token}, function(err, user){
+            if(err) return cb(err);
+            cb(null, user)
+        })
+    })
 }
 
 const User = mongoose.model('User', userSchema)
